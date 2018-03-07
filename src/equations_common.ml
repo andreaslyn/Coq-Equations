@@ -201,8 +201,8 @@ let declare_instance id poly evd ctx cl args =
   let inst = new_instance (fst cl) Hints.empty_hint_info true (Globnames.ConstRef cst) in
     add_instance inst; mkConst cst
 
-let coq_unit = lazy (init_reference ["Coq";"Init";"Datatypes"] "unit")
-let coq_tt = lazy (init_reference ["Coq";"Init";"Datatypes"] "tt")
+let coq_unit = lazy (init_reference ["HoTT";"Basics";"Overture"] "Unit")
+let coq_tt = lazy (init_reference ["HoTT";"Basics";"Overture"] "tt")
 
 let coq_True = lazy (init_reference ["Coq";"Init";"Logic"] "True")
 let coq_I = lazy (init_reference ["Coq";"Init";"Logic"] "I")
@@ -230,9 +230,9 @@ let fresh_id_in_env avoid id env =
 let fresh_id avoid id gl =
   fresh_id_in_env avoid id (pf_env gl)
 
-let coq_eq = Lazy.from_fun Coqlib.build_coq_eq
-let coq_eq_refl = lazy ((Coqlib.build_coq_eq_data ()).Coqlib.refl)
-let coq_eq_case = lazy (Coqlib.coq_reference "coq_eq_case" ["Init";"Logic"] "eq_rect_r")
+let coq_eq = lazy (init_reference ["HoTT";"Basics";"Overture"] "paths")
+let coq_eq_refl = lazy (init_reference ["HoTT";"Basics";"Overture"] "idpath")
+let coq_eq_case = lazy (init_reference ["Equations";"Init"] "eq_rect_r")
 let coq_eq_elim = lazy (init_reference ["Equations";"DepElim"] "eq_rect_dep_r")
 
 let coq_heq = lazy (Coqlib.coq_reference "mkHEq" ["Logic";"JMeq"] "JMeq")
@@ -269,10 +269,10 @@ type logic = {
 let prop_logic =
   { logic_eq_ty = coq_eq; logic_eq_refl = coq_eq_refl;
     logic_eq_case = coq_eq_case; logic_eq_elim = coq_eq_elim;
-    logic_sort = Sorts.InProp; logic_zero = coq_False;
+    logic_sort = Sorts.InType; logic_zero = coq_False;
     logic_one = coq_True; logic_one_val = coq_I;
-    logic_product = lazy (Coqlib.coq_reference "product" ["Init";"Logic"] "and");
-    logic_pair = lazy (Coqlib.coq_reference "product" ["Init";"Logic"] "conj");
+    logic_product = lazy (Coqlib.coq_reference "product" ["Init";"Datatypes"] "prod");
+    logic_pair = lazy (Coqlib.coq_reference "product" ["Init";"Datatypes"] "pair");
   }
   
 let type_logic =
@@ -363,9 +363,9 @@ let coq_wellfounded_class = init_constant ["Equations";"Classes"] "WellFounded"
 let coq_wellfounded = init_constant ["Coq";"Init";"Wf"] "well_founded"
 let coq_relation = init_constant ["Coq";"Relations";"Relation_Definitions"] "relation"
 let coq_clos_trans = init_constant ["Coq";"Relations";"Relation_Operators"] "clos_trans"
-let coq_id = init_constant ["Coq";"Init";"Datatypes"] "id"
+let coq_id = init_constant ["Equations";"Init"] "id"
 
-let list_path = ["Lists";"List"]
+let list_path = ["Coq";"Init";"Datatypes"]
 let coq_list_ind = init_constant list_path "list"
 let coq_list_nil = init_constant list_path "nil"
 let coq_list_cons = init_constant list_path "cons"
