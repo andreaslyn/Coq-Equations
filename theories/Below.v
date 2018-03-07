@@ -9,9 +9,11 @@
 (** Instances of [Below] for the standard datatypes. To be used by 
    [equations] when it needs to do recursion on a type. *)
 
-Require Import Bvector.
-Require Import Vectors.Vector.
-Require Import Coq.Program.Program.
+(*Require Import Bvector.*)
+(*Require Import Vectors.Vector.*)
+(*Require Import Coq.Program.Program.*)
+Require Import Coq.Program.Equality.
+Require Import HoTT.Basics.Overture.
 Require Export Equations.Init Equations.DepElim.
 
 (** The [BelowPackage] class provides the definition of a [Below] predicate for some datatype,
@@ -65,8 +67,10 @@ Hint Opaque fix_proto : Below.
 
 Hint Extern 100 => apply_fix_proto : Below.
 
+
 (** We now derive standard Below instances. *)
 
+(* FIXME Conversion test raised an anomaly: Anomaly "Universe Var(0) undefined."
 Derive Below for nat.
 
 Definition rec_nat (P : nat -> Type) n (step : forall n, Below_nat P n -> P n) : P n :=
@@ -88,6 +92,8 @@ Below_vector A P ?(S n) (cons a n v) :=
 
 Hint Rewrite Below_vector_equation_2 : Below.
 
+end of fixme. *)
+
 (* Equations(nocomp noeqns noind) below_vector A (P : ∀ n, vector A n -> Type) *)
 (*   (step : ∀ n (v : vector A n), Below_vector A P n v -> P n v) *)
 (*   n (v : vector A n) : Below_vector A P n v := *)
@@ -108,7 +114,7 @@ Hint Rewrite Below_vector_equation_2 : Below.
 
 (* Hint Unfold rec_nat rec_vector : Recursors. *)
 
-Hint Extern 4 => progress (unfold hide_pattern in *) : Below.
+Hint Extern 4 => progress (unfold hide_pattern in * ) : Below.
 
 Ltac add_pattern t :=
   match goal with

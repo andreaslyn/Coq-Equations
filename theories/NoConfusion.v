@@ -10,7 +10,7 @@
    [equations] when it needs applications of injectivity or discrimination
    on some equation. *)
 
-Require Import Coq.Program.Program Bvector List.
+(*Require Import Coq.Program.Program Bvector List.*)
 Require Import Equations.Signature Equations.EqDec.
 Require Export Equations.DepElim.
 
@@ -62,14 +62,61 @@ Ltac solve_noconf_inv_equiv :=
 
 Ltac solve_noconf := simpl; intros;
     match goal with
-      [ H : @eq _ _ _ |- @eq _ _ _ ] => solve_noconf_inv_equiv
-    | [ H : @eq _ _ _ |- _ ] => solve_noconf_prf
-    | [ |- @eq _ _ _ ] => solve_noconf_inv
+      [ H : @paths _ _ _ |- @paths _ _ _ ] => solve_noconf_inv_equiv
+    | [ H : @paths _ _ _ |- _ ] => solve_noconf_prf
+    | [ |- @paths _ _ _ ] => solve_noconf_inv
     end.
 
-Derive NoConfusion for unit bool nat option sum prod list sigT sig.
+Derive NoConfusion for Unit.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+
+Derive NoConfusion for nat.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+
+Derive NoConfusion for option.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+
+Derive NoConfusion for list.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+
+Derive NoConfusion for sum.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+
+Require Import HoTT.Types.Bool.
+Definition Bool_rect := Bool_ind.
+
+Derive NoConfusion for Bool.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+
+(* FIXME. Problem with pattern matching on primitive record.
+Error: Pattern-matching expression on an object of inductive type @sig
+       has invalid information.
+Derive NoConfusion for sig.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+*)
+(* FIXME. Same problem as above.
+Derive NoConfusion for prod.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+*)
+
+(* TODO This should work. *)
+(*Derive NoConfusion for Unit Bool nat option list sum prod sig.*)
 
 (* FIXME should be done by the derive command *)
 Extraction Inline noConfusion NoConfusionPackage_nat.
-
-

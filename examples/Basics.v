@@ -22,13 +22,15 @@
   If running this interactively you can ignore the printing
   and hide directives which are just used to instruct coqdoc. *)
 
-Require Import Program Bvector List Relations.
+(* Require Import Program Bvector List Relations. *)
 From Equations Require Import Equations Signature.
 Require Import Utf8.
 Require Import DepElimDec.
+Require Import HoTT.Types.Bool.
+Definition Bool_rect := Bool_ind.
 
 (** Just pattern-matching *)
-Equations neg (b : bool) : bool :=
+Equations neg (b : Bool) : Bool :=
 neg true := false ;
 neg false := true.
 
@@ -50,7 +52,7 @@ Module Obligations.
   }.
   Next Obligation.
     intros. exact IH.
-  Defined.
+  Defined. (* FIXME *)
 
 End Obligations.
 

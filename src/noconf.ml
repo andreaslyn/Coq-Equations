@@ -132,10 +132,11 @@ let derive_no_confusion env evd ~polymorphic (ind,u as indu) =
   let noconfcl = Evarutil.e_new_global evd tc.Typeclasses.cl_impl in
   let inst, u = destInd !evd noconfcl in
   let noconfterm = mkApp (noconf, paramsvect) in
-  let argty =
-    let ty = Retyping.get_type_of env !evd noconfterm in
+  let ctx, argty =
+    let ty = Retyping.get_type_of env !evd noconf in
+    let ctx, ty = EConstr.decompose_prod_n_assum !evd (List.length oneind.mind_arity_ctxt) ty in
     match kind !evd ty with
-    | Prod (_, b, _) -> b
+    | Prod (_, b, _) -> ctx, b
     | _ -> assert false
   in
   let b, ty = 
@@ -161,8 +162,10 @@ let derive_no_confusion env evd ~polymorphic (ind,u as indu) =
   let oblinfo, _, term, ty = Obligations.eterm_obligations env noid !evd 0 (to_constr !evd term)
                                                            (to_constr !evd ty) in
     ignore(Obligations.add_definition ~hook:(Lemmas.mk_hook hook) packid 
-	      ~term ty ~tactic:(noconf_tac ()) 
+        (* FIXME Should use noconf_tac below: *)
+        ~term ty ~tactic:(tac_of_string "idtac" [] (* noconf_tac () *))
 	      (Evd.evar_universe_context !evd) oblinfo)
+
 let () =
   Derive.(register_derive
             { derive_name = "NoConfusion";
