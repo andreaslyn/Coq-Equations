@@ -54,7 +54,7 @@ Next Obligation.
   simp f91. constructor. destruct le_lt_dec. constructor. intros. apply IH.
   do 2 red; omega.
   apply IH. do 2 red. destruct_call f91. simpl proj1_sig.
-  destruct le_lt_dec; subst; omega.
+  destruct le_lt_dec; subst; repeat red; omega.
   constructor.
 Defined.
 

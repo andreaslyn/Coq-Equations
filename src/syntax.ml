@@ -42,9 +42,11 @@ type rec_annotation =
 
 type user_rec_annot = (rec_annotation * Id.t with_loc option) option
 
+type rec_arg = int * Id.t with_loc option
+    
 type rec_annot =
-  | StructuralOn of int
-  | NestedOn of int option
+  | StructuralOn of rec_arg
+  | NestedOn of rec_arg option
 
 type program =
   (signature * clause list) list
@@ -150,7 +152,7 @@ let pr_equation_options  _prc _prlc _prt l =
   mt ()
 
 type rec_type = 
-  | Structural of (Id.t * rec_annot * Id.t with_loc option) list (* for mutual rec *)
+  | Structural of (Id.t * rec_annot) list (* for mutual rec *)
   | Logical of logical_rec
 
 and logical_rec =
@@ -213,7 +215,7 @@ let add_implicits impls avoid pats =
 	     pat :: aux imps pats
 	 with Not_found ->
 	   let n = next_ident_away id avoid in
-	   let pat = PEPat (CAst.make (CPatAtom (Some (Ident (None, n))))) in
+	   let pat = PEPat (CAst.make (CPatAtom (Some (CAst.make (Ident n))))) in
            avoid := Id.Set.add n !avoid;
 	   (default_loc, pat) :: aux imps pats
        else begin
@@ -269,6 +271,20 @@ let rec interp_pat env ?(avoid = ref Id.Set.empty) (loc, p) =
                              str "Or patterns not supported by Equations")
       in upat
 
+let check_linearity pats =
+  let rec aux ids pats = 
+    List.fold_left (fun ids (loc, pat) ->
+      match pat with
+      | PUVar (n, _) ->
+	if Id.Set.mem n ids then
+	  CErrors.user_err ?loc ~hdr:"ids_of_pats"
+	    (str "Non-linear occurrence of variable in patterns")
+	else Id.Set.add n ids
+      | PUInac _ -> ids
+      | PUCstr (_, _, pats) -> aux ids pats)
+      ids pats
+  in ignore (aux Id.Set.empty pats)
+	
 let interp_eqn initi is_rec env impls eqn =
   let avoid = ref Id.Set.empty in
   let interp_pat = interp_pat env ~avoid in
@@ -302,10 +318,11 @@ let interp_eqn initi is_rec env impls eqn =
       in Loc.merge beginloc endloc
     in
     let pats = map interp_pat curpats'' in
+    let () = check_linearity pats in
       match is_rec with
       | Some (Structural l) ->
          (* let fnpat = (dummy_loc, PUVar (i, false)) in *)
-         let addpat (id, k, _) =
+         let addpat (id, k) =
            match k with
            | NestedOn None when Id.equal id initi -> None
            | _ -> Some (None, PUVar (id, false))
@@ -336,19 +353,19 @@ let interp_eqn initi is_rec env impls eqn =
   and interp_constr_expr recinfo ids ?(loc=default_loc) c =
     match c with
     (* |   | CAppExpl of loc * (proj_flag * reference) * constr_expr list *)
-    | CApp ((None, { CAst.v = CRef (Ident (loc',id'), ie) }), args)
+    | CApp ((None, { CAst.v = CRef ({ CAst.loc=loc'; v=Ident id'}, ie) }), args)
       when List.mem_assoc_f Id.equal id' recinfo ->
        let r = List.assoc_f Id.equal id' recinfo in
        let args =
          List.map (fun (c, expl) -> CAst.with_loc_val (interp_constr_expr recinfo ids) c, expl) args in
-       let c = CApp ((None, CAst.make ~loc (CRef (Ident (loc', id'), ie))), args) in
+       let c = CApp ((None, CAst.(make ~loc (CRef (CAst.make ?loc:loc' (Ident id'), ie)))), args) in
        let arg = CAst.make ~loc (CApp ((None, CAst.make ~loc c), [chole id' loc])) in
        (match r with
         | LogicalDirect _ -> arg
         | LogicalProj r -> 
           let arg = if Option.is_empty r.comp then [arg, None] else [] in
           let qidproj = Nametab.shortest_qualid_of_global Id.Set.empty (ConstRef r.comp_proj) in
-          CAst.make ~loc (CApp ((None, CAst.make ?loc:loc' (CRef (Qualid (loc', qidproj), None))),
+          CAst.make ~loc (CApp ((None, CAst.make ?loc:loc' (CRef (CAst.make ?loc:loc' (Qualid qidproj), None))),
                                 args @ arg)))
     | _ -> map_constr_expr_with_binders Id.Set.add
              (fun ids -> CAst.with_loc_val (interp_constr_expr recinfo ids)) ids (CAst.make ~loc c)

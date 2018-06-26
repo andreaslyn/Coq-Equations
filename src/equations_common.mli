@@ -9,6 +9,7 @@
 open EConstr
 open Environ
 open Names
+open Ltac_plugin
 
 type 'a peuniverses = 'a * EConstr.EInstance.t
 
@@ -301,6 +302,7 @@ val autounfold_first :
   Hints.hint_db_name list ->
   Locus.hyp_location option ->
   Goal.goal Evd.sigma -> Goal.goal list Evd.sigma
+val specialize_mutfix_tac : unit -> unit Proofview.tactic
 
 type hintdb_name = string
 val db_of_constr : Constr.t -> hintdb_name

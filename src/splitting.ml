@@ -349,6 +349,7 @@ type term_info = {
   decl_kind: Decl_kinds.definition_kind;
   helpers_info : (Evar.t * int * identifier) list;
   comp_obls : Id.Set.t; (** The recursive call proof obligations *)
+  user_obls : Id.Set.t; (** The user obligations *)
 }
 
 type program_info = {
@@ -381,6 +382,7 @@ let define_tree is_recursive fixprots poly impls status isevar env (i, sign, ari
       0 ~status (EConstr.to_constr !isevar t) (EConstr.to_constr !isevar (whd_betalet !isevar ty))
   in
   let compobls = ref Id.Set.empty in
+  let userobls = ref Id.Set.empty in
   let obls = 
     Array.map (fun (id, ty, loc, s, d, t) ->
       let assc = rev_assoc Id.equal id emap in
@@ -400,10 +402,14 @@ let define_tree is_recursive fixprots poly impls status isevar env (i, sign, ari
 	            [((Locus.AllOccurrencesBut [1]), EvalConstRef comp)]))
                 tclIDTAC r.comp
           in
-	    Some (of82 (tclTRY
-			  (tclTHENLIST [to82 zeta_red; to82 Tactics.intros; unfolds;
-					(to82 (solve_rec_tac ()))])))
-	else Some ((!Obligations.default_tactic))
+	  let open Tacticals.New in
+	    Some (tclORELSE
+		    (tclTRY
+		       (tclTHENLIST [zeta_red; Tactics.intros; of82 unfolds;
+				     solve_rec_tac ()]))
+		    !Obligations.default_tactic)
+        else (userobls := Id.Set.add id !userobls;
+              Some ((!Obligations.default_tactic)))
       in (id, ty, loc, s, d, tac)) obls
   in
   let helpers = List.map (fun (ev, arg) ->
@@ -411,12 +417,12 @@ let define_tree is_recursive fixprots poly impls status isevar env (i, sign, ari
   in
   let hook locality gr =
     let l =
-      Array.map_to_list (fun (id, ty, loc, s, d, tac) -> Ident (dummy_loc, id)) obls in
+      Array.map_to_list (fun (id, ty, loc, s, d, tac) -> CAst.make @@ Libnames.Ident id) obls in
     Extraction_plugin.Table.extraction_inline true l;
     let kind = (locality, poly, Decl_kinds.Definition) in
     let baseid = Id.to_string i in
     let term_info = { term_id = gr; base_id = baseid; helpers_info = helpers; decl_kind = kind;
-                      comp_obls = !compobls } in
+                      comp_obls = !compobls; user_obls = Id.Set.union !compobls !userobls } in
       hook split cmap term_info
   in
   let hook = Lemmas.mk_hook hook in
@@ -433,9 +439,15 @@ let define_tree is_recursive fixprots poly impls status isevar env (i, sign, ari
     | Some (Syntax.Structural [id]) ->
         let ty' = it_mkProd_or_LetIn ty' [make_assum Anonymous ty'] in
         let ty' = EConstr.to_constr !isevar ty' in
+	let recarg =
+	  match snd id with
+	  | StructuralOn (_, Some (loc, id))
+	  | NestedOn (Some (_, Some (loc, id))) -> Some (CAst.make ~loc id)
+	  | _ -> None
+	in
 	ignore(Obligations.add_mutual_definitions [(i, t', ty', impls, obls)] 
 		 (Evd.evar_universe_context !isevar) [] ~kind
-                 ~reduce ~hook (Obligations.IsFixpoint [Option.map (fun (loc, x) -> CAst.make ~loc x) (pi3 id), CStructRec]))
+                 ~reduce ~hook (Obligations.IsFixpoint [recarg, CStructRec]))
     | Some (Structural ids) ->
         let ty' = it_mkProd_or_LetIn ty' fixprots in
         let ty' = EConstr.to_constr !isevar ty' in
@@ -463,7 +475,7 @@ let map_rhs f g = function
 
 let map_evars_in_constr evd evar_map c =
   evar_map (fun id ->
-	    let gr = Nametab.global (Qualid (dummy_loc, qualid_of_ident id)) in
+	    let gr = Nametab.global (CAst.make @@ Qualid (qualid_of_ident id)) in
             let (f, uc) = Global.constr_of_global_in_context (Global.env ()) gr in
             let inst, ctx = ucontext_of_aucontext uc in
             Universes.constr_of_global_univ (Globnames.global_of_constr f, inst))

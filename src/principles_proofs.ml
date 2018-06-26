@@ -25,10 +25,18 @@ open Vars
 module PathOT =
   struct
     type t = Covering.path
+
+    let path_component_compare p p' =
+      match p, p' with
+      | Evar ev, Evar ev' -> Evar.compare ev ev'
+      | Ident id, Ident id' -> Id.compare id id'
+      | Evar _, Ident _ -> -1
+      | Ident _, Evar _ -> 1
+
     let rec compare p p' =
       match p, p' with
       | ev :: p, ev' :: p' ->
-         let c = Evar.compare ev ev' in
+         let c = path_component_compare ev ev' in
          if c == 0 then compare p p'
          else c
       | _ :: _, [] -> -1
@@ -333,7 +341,7 @@ let rec aux_ind_fun info chop unfs unfids = function
          tclTHENLIST
           [observe "letin" (to82 (letin_pat_tac true None (Name id) (project gl, elim) occs));
            observe "convert concl" (to82 (convert_concl_no_check newconcl DEFAULTcast));
-           Proofview.V82.of_tactic (clear_body [id]);
+           observe "clear body" (Proofview.V82.of_tactic (clear_body [id]));
            aux_ind_fun info chop unfs unfids s] gl
       | _ -> tclFAIL 0 (str"Unexpected refinement goal in functional induction proof") gl
     in
@@ -357,7 +365,9 @@ let rec aux_ind_fun info chop unfs unfids = function
             | None -> s.where_term, fst chop + List.length s.where_nctx, unfids, s.where_nctx
             | Some w ->
                let assoc, unf, split =
-                 try Evar.Map.find (List.hd w.where_path) info.wheremap
+                 try match List.hd w.where_path with
+                     | Evar ev -> Evar.Map.find ev info.wheremap
+                     | Ident _ -> assert false
                  with Not_found -> assert false
                in
                (* msg_debug (str"Unfolded where " ++ str"term: " ++ pr_constr w.where_term ++ *)
@@ -490,8 +500,8 @@ let ind_fun_tac is_rec f info fid split unfsplit progs =
   | Some (Structural l) ->
      let open Proofview in
      let open Notations in
-     let mutual, nested = List.partition (function (_, StructuralOn _, _) -> true | _ -> false) l in
-     let mutannots = List.map (function (_, StructuralOn ann, _) -> ann + 1 | _ -> -1) mutual in
+     let mutual, nested = List.partition (function (_, StructuralOn _) -> true | _ -> false) l in
+     let mutannots = List.map (function (_, StructuralOn (ann, _)) -> ann + 1 | _ -> -1) mutual in
      let mutprogs, nestedprogs =
        List.partition (fun (p,_,e) -> match p.program_rec_annot with
                                       | Some (StructuralOn _) -> true
@@ -505,16 +515,22 @@ let ind_fun_tac is_rec f info fid split unfsplit progs =
      in
      let prove_progs progs =
        intros <*>
-         tclDISPATCH (List.map (fun (_,_,e) -> (* observe_tac "proving one mutual " *) (of82 (aux_ind_fun info (0, List.length mutual) None [] e.equations_split)))
-                               progs)
+       tclDISPATCH (List.map (fun (_,cpi,e) ->
+                    (* observe_tac "proving one mutual " *)
+                    let proginfo =
+                      { info with term_info = { info.term_info with helpers_info = info.term_info.helpers_info @ cpi.program_split_info.helpers_info } }
+                    in
+                    (of82 (aux_ind_fun proginfo (0, List.length l) None [] e.equations_split)))
+                    progs)
      in
      let prove_nested =
-       tclDISPATCH (List.map (function (_,NestedOn (Some ann),_) -> fix None (ann + 1)
-                                     | _ -> tclUNIT ()) nested) <*>
+       tclDISPATCH
+         (List.map (function (id,NestedOn (Some (ann,_))) -> fix (Some id) (ann + 1)
+                         | _ -> tclUNIT ()) nested) <*>
          prove_progs nestedprogs
      in
      let mutfix =
-       mutual_fix [] mutannots <*> prove_progs mutprogs
+       mutual_fix [] mutannots <*> specialize_mutfix_tac () <*> prove_progs mutprogs
      in
      let mutlen = List.length mutprogs in
      (* let intros_conj len = *)
@@ -554,7 +570,7 @@ let ind_fun_tac is_rec f info fid split unfsplit progs =
          assert_before Anonymous mutprops <*>
          tclDISPATCH
            [observe_tac "mutfix"
-                        (splits mutprogs <*> tclFOCUS 1 (List.length mutual) mutfix);
+               (splits mutprogs <*> tclFOCUS 1 (List.length mutual) mutfix);
             tclUNIT ()] <*>
          (* On the rest of the goals, do the nested proofs *)
          observe_tac "after mut -> nested and mut provable" (eauto ~depth:None)
@@ -565,10 +581,10 @@ let ind_fun_tac is_rec f info fid split unfsplit progs =
 
 
 let simpl_of csts =
-  let opacify () = List.iter (fun cst -> 
+  let opacify () = List.iter (fun (cst,_) ->
     Global.set_strategy (ConstKey cst) Conv_oracle.Opaque) csts
-  and transp () = List.iter (fun cst -> 
-    Global.set_strategy (ConstKey cst) Conv_oracle.Expand) csts
+  and transp () = List.iter (fun (cst, level) ->
+    Global.set_strategy (ConstKey cst) level) csts
   in opacify, transp
 
 let get_proj_eval_ref p =
@@ -580,8 +596,10 @@ let prove_unfolding_lemma info where_map proj f_cst funf_cst split unfold_split 
   let depelim h = depelim_tac h in
   let helpercsts = List.map (fun (_, _, i) -> destConstRef (global_reference i))
 			    info.helpers_info in
-  let opacify, transp = simpl_of (destConstRef (Lazy.force coq_hidebody) :: helpercsts) in
+  let opacify, transp = simpl_of ((destConstRef (Lazy.force coq_hidebody), Conv_oracle.transparent)
+    :: List.map (fun x -> x, Conv_oracle.Expand) (f_cst :: funf_cst :: helpercsts)) in
   let opacified tac gl = opacify (); let res = tac gl in transp (); res in
+  let transparent tac gl = transp (); let res = tac gl in opacify (); res in
   let simpltac gl = opacified (to82 (simpl_equations_tac ())) gl in
   let my_simpl = opacified (to82 (simpl_in_concl)) in
   let unfolds = tclTHEN (autounfold_first [info.base_id] None)
@@ -602,7 +620,7 @@ let prove_unfolding_lemma info where_map proj f_cst funf_cst split unfold_split 
 	  else to82 reflexivity gl
     | _ -> to82 reflexivity gl
   in
-  let solve_eq = tclORELSE (to82 reflexivity) solve_rec_eq in
+  let solve_eq = observe "solve_eq" (tclORELSE (transparent (to82 reflexivity)) solve_rec_eq) in
   let abstract tac = tclABSTRACT None tac in
   let rec aux split unfold_split =
     match split, unfold_split with
@@ -669,12 +687,11 @@ let prove_unfolding_lemma info where_map proj f_cst funf_cst split unfold_split 
     | Compute (_, wheres, _, RProgram _), Compute (_, unfwheres, _, RProgram c) ->
        let wheretac acc w unfw =
          let assoc, id, _ =
-           try Evar.Map.find (List.hd unfw.where_path) where_map
+           try match List.hd unfw.where_path with
+               | Evar ev -> Evar.Map.find ev where_map
+               | Ident _ -> assert false
            with Not_found -> assert false
          in
-         (* msg_debug (str"Found where: " ++ *)
-         (*              pr_id unfw.where_id ++ str"term: " ++ pr_constr unfw.where_term ++ *)
-         (*              str " where assoc " ++ pr_constr assoc); *)
          fun gl ->
          let env = pf_env gl in
          let evd = ref (project gl) in
@@ -695,8 +712,6 @@ let prove_unfolding_lemma info where_map proj f_cst funf_cst split unfold_split 
            let res = to82 (unfold_in_concl
 	     [Locus.OnlyOccurrences [1], EvalConstRef f_cst;
 	      (Locus.OnlyOccurrences [1], EvalConstRef funf_cst)]) gl in
-           (* Global.set_strategy (ConstKey f_cst) Conv_oracle.Opaque; *)
-	   (* Global.set_strategy (ConstKey funf_cst) Conv_oracle.Opaque; *)
            res
          in
          let tac =
@@ -716,9 +731,9 @@ let prove_unfolding_lemma info where_map proj f_cst funf_cst split unfold_split 
          List.fold_left2 wheretac tclIDTAC wheres unfwheres
        in
        observe "compute"
-               (to82 (abstract (of82 (tclTHENLIST [to82 intros; wheretacs;
-                                                   observe "compute rhs" (tclTRY unfolds);
-                                                   simpltac; solve_eq]))))
+         (tclTHENLIST [to82 intros; wheretacs;
+                       observe "compute rhs" (tclTRY unfolds);
+                       simpltac; solve_eq])
 
     | Compute (_, _, _, _), Compute ((ctx,_,_), _, _, REmpty id) ->
 	let d = nth ctx (pred id) in
@@ -740,13 +755,8 @@ let prove_unfolding_lemma info where_map proj f_cst funf_cst split unfold_split 
 	     Global.set_strategy (ConstKey f_cst) Conv_oracle.Opaque;
 	     Global.set_strategy (ConstKey funf_cst) Conv_oracle.Opaque;
 	     aux split unfold_split gl)] gl
-      in Global.set_strategy (ConstKey f_cst) Conv_oracle.Expand;
-	Global.set_strategy (ConstKey funf_cst) Conv_oracle.Expand;
-	res
-    with e ->
-      Global.set_strategy (ConstKey f_cst) Conv_oracle.Expand;
-      Global.set_strategy (ConstKey funf_cst) Conv_oracle.Expand;
-      raise e
+      in transp (); res
+    with e -> transp (); raise e
   
 
 (* let rec mk_app_holes env sigma = function *)
