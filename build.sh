@@ -90,6 +90,7 @@ makeCoq() {
   if [ ! -e "$hottDir"/coq-HoTT/Makefile ]; then
     git -C "$hottDir" submodule sync
     git -C "$hottDir" submodule update --init --recursive
+    git -C "$hottDir"/coq-HoTT checkout f895effe3f507e138c781134c621d76035c97e5f
     cd "$hottDir"/coq-HoTT
     ./configure -local
   fi
@@ -158,8 +159,16 @@ buildEquations() {
     make -C "$equationsDir" COQBIN="$hottDir/"
 }
 
+buildExamples() {
+  buildEquations
+  OCAMLFIND_IGNORE_DUPS_IN="$hottDir"/coq-HoTT/plugins/derive \
+    make -C "$equationsDir/examples" COQBIN="$hottDir/"
+}
+
 if [ "$1" = Eq ]; then
   buildEquations
+elif [ "$1" = Ex ]; then
+  buildExamples
 elif [ "$1" = HoTT ]; then
   buildHoTT
 else

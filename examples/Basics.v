@@ -29,6 +29,8 @@ Require Import DepElimDec.
 Require Import HoTT.Types.Bool.
 Definition Bool_rect := Bool_ind.
 
+Set Printing Universes.
+
 (** Just pattern-matching *)
 Equations neg (b : Bool) : Bool :=
 neg true := false ;
@@ -48,11 +50,11 @@ Module Obligations.
   f 0 := 42 ;
   f (S m) with f m :=
   {
-    f (S m) IH := _
+    f (S m) IH := IH
   }.
-  Next Obligation.
+  (*Next Obligation.
     intros. exact IH.
-  Defined. (* FIXME *)
+  Defined.*)
 
 End Obligations.
 

@@ -50,30 +50,131 @@ Ltac eqdec_proof := try red; intros;
 Instance unit_eqdec : EqDec Unit. 
 Proof. eqdec_proof. Defined.
 
-(* FIXME missing proofs... *)
+(* TODO These instance proofs should use eqdec_proof. *)
+
+Require Import HoTT.Basics.Decidable.
 
 Require Import HoTT.Types.Bool.
 Definition Bool_rect := Bool_ind.
 
 Instance bool_eqdec : EqDec Bool.
-Proof. Admitted.
+Proof. unfold EqDec. intros; destruct x,y; try (apply inl; reflexivity).
+apply inr; intro.
+  refine (
+    match X in _ = b return
+      match b with
+      | true => Unit
+      | false => _
+      end
+    with
+    | idpath => tt
+    end).
+apply inr; intro.
+  refine (
+    match X in _ = b return
+      match b with
+      | false => Unit
+      | true => _
+      end
+    with
+    | idpath => tt
+    end).
+Defined.
 
+Require Import HoTT.Spaces.Nat.
 Instance nat_eqdec : EqDec nat.
-Proof. Admitted.
+Proof. unfold EqDec. intros.
+  destruct (dec_paths x y).
+  - rewrite p; apply inl; reflexivity.
+  - apply inr; intro. destruct n. rewrite X; reflexivity. Defined.
 
 Instance prod_eqdec {A B} `(EqDec A) `(EqDec B) : EqDec (prod A B).
-Proof. Admitted.
+Proof. unfold EqDec; intros. destruct x,y. destruct (eq_dec fst fst0), (eq_dec snd snd0).
+  - apply inl. rewrite p, p0; reflexivity.
+  - apply inr; intro; apply n.
+    apply (paths_ind (fst,snd) (fun a _ => snd = (Coq.Init.Datatypes.snd a))
+                  idpath (fst0,snd0) X).
+  - apply inr; intro; apply n.
+    apply (paths_ind (fst,snd) (fun a _ => fst = (Coq.Init.Datatypes.fst a))
+                  idpath (fst0,snd0) X).
+  - apply inr; intro; apply n.
+    apply (paths_ind (fst,snd) (fun a _ => fst = (Coq.Init.Datatypes.fst a))
+                  idpath (fst0,snd0) X). Defined.
+
+Local Lemma eqDecIsDecidablePaths {A} (X : EqDec A) : DecidablePaths A.
+Proof. intros x y. destruct (eq_dec x y).
+  - apply Datatypes.inl. rewrite p; reflexivity.
+  - apply Datatypes.inr. intro H. rewrite H in n.
+    destruct (n idpath). Defined.
 
 Instance sum_eqdec {A B} `(EqDec A) `(EqDec B) : EqDec (A + B).
-Proof. Admitted.
+Proof. unfold EqDec; intros.
+  set(x' := eqDecIsDecidablePaths H); set(y' := eqDecIsDecidablePaths H0).
+  destruct (dec_paths x y).
+  - apply inl; rewrite p. constructor.
+  - apply inr; intro. rewrite X in n; destruct (n idpath). Defined.
+
+Local Open Scope list_scope.
+
+Local Definition tl_list {A} (x : list A) : list A :=
+  match x with
+  | nil => nil
+  | _ :: t => t
+  end.
+
+Local Definition hd_list {A} (x : list A) : option A :=
+  match x with
+  | nil => None
+  | h :: _ => Some h
+  end.
 
 Instance list_eqdec {A} `(EqDec A) : EqDec (list A). 
-Proof. Admitted.
+Proof. unfold EqDec. intro x. induction x; intros; destruct y.
+  - apply inl; reflexivity.
+  - apply inr; intro.
+    refine (match X in _ = c return
+      match c with
+      | nil => Unit
+      | _::_ => _
+      end
+    with
+    | idpath => tt
+    end).
+  - apply inr; intro.
+    refine (match X in _ = c return
+      match c with
+      | nil => _
+      | _::_ => Unit
+      end
+    with
+    | idpath => tt
+    end).
+  - destruct (eq_dec a a0).
+    + rewrite p. destruct (IHx y).
+      * apply inl. rewrite p0; reflexivity.
+      * apply inr. intro; apply n.
+        apply(paths_ind (a0::x) (fun z _ => x = (tl_list z)) idpath (a0::y) X).
+    + apply inr; intro. apply n.
+      apply (paths_ind (a::x)
+                    (fun z _ =>
+                      match hd_list z with
+                      | None => a = a0
+                      | Some h => a = h
+                      end)
+                    idpath (a0::y) X).
+Defined.
 
 Instance sigma_eqdec {A B} `(EqDec A) `(forall x, EqDec (B x)) : EqDec {x : A & B x}.
-Proof. Admitted.
+Proof. 
+  intros. intros [x0 x1] [y0 y1].
+  case (eq_dec x0 y0). intros ->. case (eq_dec x1 y1). intros ->. left. reflexivity.
+  intros. right. red. apply simplification_existT2_dec. apply n.
+  intros. right. red. apply simplification_existT1.
+  intros e _; revert e. apply n.
+Defined.
+
 Set Printing Universes.
-(* Error: Universe {Top.79} is unbound*)
+
 Polymorphic Definition eqdec_sig@{i j k} {A : Type@{i}} {B : A -> Type@{j}}
             `(EqDec A) `(forall a, EqDec (B a)) :
   EqDec@{k} (sigma A B).

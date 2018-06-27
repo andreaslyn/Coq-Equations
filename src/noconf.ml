@@ -119,7 +119,8 @@ let derive_no_confusion env evd ~polymorphic (ind,u as indu) =
 	          else fls)))
   in
   let app = it_mkLambda_or_LetIn pred binders in
-  let ce = make_definition ~poly:polymorphic evd ~types:arity app in
+  (* FIXME make_definition fails with ~types:arity *)
+  let ce = make_definition ~poly:polymorphic evd (*~types:arity*) app in
   let indid = Nametab.basename_of_global (IndRef ind) in
   let id = add_prefix "NoConfusion_" indid
   and noid = add_prefix "noConfusion_" indid

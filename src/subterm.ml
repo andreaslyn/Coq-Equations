@@ -353,12 +353,14 @@ let derive_below env sigma ~polymorphic (ind,univ as indu) =
 				     [| subst_vars [recid; pid] termB |])) in
   let bodyB = it_mkLambda_or_LetIn fixB (pdecl :: parambinders) in
   let id = add_prefix "Below_" (Nametab.basename_of_global (IndRef ind)) in
+  (* FIXME. Below does not work with poly=true *)
   let below = declare_constant id bodyB None polymorphic !evd
     (Decl_kinds.IsDefinition Decl_kinds.Definition) in
   let fixb = mkFix (([| realargs |], 0), ([| Name recid |], [| arityb |],
 				    [| subst_vars [recid; stepid] termb |])) in
+  let (evd, belowB) = EConstr.fresh_global (Global.env ()) !evd (ConstRef below) in
   let stepdecl = 
-    let stepty = mkProd (Anonymous, mkApp (mkConst below, paramspargs),
+    let stepty = mkProd (Anonymous, mkApp (belowB, paramspargs),
 			mkApp (mkVar pid, Array.map (lift 1) argsvect))
     in make_assum (Name stepid) (lift 1 (it_mkProd_or_LetIn stepty argbinders))
   in
@@ -367,9 +369,9 @@ let derive_below env sigma ~polymorphic (ind,univ as indu) =
       (subst_vars [pid] (mkLambda_or_LetIn stepdecl fixb))
       (pdecl :: parambinders)
   in
-  let bodyb = replace_vars [belowid, mkConst below] bodyb in
+  let bodyb = replace_vars [belowid, belowB] bodyb in
   let id = add_prefix "below_" (Nametab.basename_of_global (IndRef ind)) in
-  let evd = if polymorphic then !evd else Evd.from_env (Global.env ()) in
+  let evd = if polymorphic then evd else Evd.from_env (Global.env ()) in
     ignore(declare_constant id bodyb None polymorphic evd
 	     (Decl_kinds.IsDefinition Decl_kinds.Definition))
     

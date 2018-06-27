@@ -70,7 +70,6 @@ Hint Extern 100 => apply_fix_proto : Below.
 
 (** We now derive standard Below instances. *)
 
-(* FIXME Conversion test raised an anomaly: Anomaly "Universe Var(0) undefined."
 Derive Below for nat.
 
 Definition rec_nat (P : nat -> Type) n (step : forall n, Below_nat P n -> P n) : P n :=
@@ -80,6 +79,7 @@ Instance nat_Recursor : Recursor nat :=
   { rec_type := fun n => forall P step, P n ;
     rec := fun n P step => rec_nat P n step }.
 
+(* FIXME - Missing Vector
 Notation vector := Vector.t.
 Import Vector.
 Arguments nil {A}.

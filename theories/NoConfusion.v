@@ -67,56 +67,55 @@ Ltac solve_noconf := simpl; intros;
     | [ |- @paths _ _ _ ] => solve_noconf_inv
     end.
 
-Derive NoConfusion for Unit.
-Next Obligation. solve_noconf. Defined.
-Next Obligation. solve_noconf. Defined.
-Next Obligation. solve_noconf. Defined.
-
-Derive NoConfusion for nat.
-Next Obligation. solve_noconf. Defined.
-Next Obligation. solve_noconf. Defined.
-Next Obligation. solve_noconf. Defined.
-
-Derive NoConfusion for option.
-Next Obligation. solve_noconf. Defined.
-Next Obligation. solve_noconf. Defined.
-Next Obligation. solve_noconf. Defined.
-
-Derive NoConfusion for list.
-Next Obligation. solve_noconf. Defined.
-Next Obligation. solve_noconf. Defined.
-Next Obligation. solve_noconf. Defined.
-
-Derive NoConfusion for sum.
-Next Obligation. solve_noconf. Defined.
-Next Obligation. solve_noconf. Defined.
-Next Obligation. solve_noconf. Defined.
-
 Require Import HoTT.Types.Bool.
 Definition Bool_rect := Bool_ind.
 
-Derive NoConfusion for Bool.
+Derive NoConfusion for Unit Bool nat option list sum prod sig.
 Next Obligation. solve_noconf. Defined.
 Next Obligation. solve_noconf. Defined.
 Next Obligation. solve_noconf. Defined.
 
-(* FIXME. Problem with pattern matching on primitive record.
-Error: Pattern-matching expression on an object of inductive type @sig
-       has invalid information.
-Derive NoConfusion for sig.
-Next Obligation. Admitted.
-Next Obligation. Admitted.
-Next Obligation. Admitted.
-*)
-(* FIXME. Same problem as above.
-Derive NoConfusion for prod.
-Next Obligation. Admitted.
-Next Obligation. Admitted.
-Next Obligation. Admitted.
-*)
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
 
-(* TODO This should work. *)
-(*Derive NoConfusion for Unit Bool nat option list sum prod sig.*)
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+
+Next Obligation. destruct X; reflexivity. Defined.
+Next Obligation. 
+  apply (
+    paths_ind
+      {| pr1 := fst0; pr2 := snd0 |}
+      (fun s _ => (fst0, snd0) = (s.(pr1), s.(pr2)))
+      idpath
+      {| pr1 := fst; pr2 := snd |}
+      X). Defined.
+Next Obligation. destruct e. reflexivity. Defined.
+
+Next Obligation. destruct X; reflexivity. Defined.
+Next Obligation.
+  apply (
+    paths_ind
+      {| pr1 := a; pr2 := X1 |}
+      (fun s _ => (a; X1) = (s.(pr1); s.(pr2)))
+      idpath
+      {| pr1 := b; pr2 := X0 |}
+      X). Defined.
+Next Obligation. destruct e; reflexivity. Defined.
+
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
+Next Obligation. solve_noconf. Defined.
 
 (* FIXME should be done by the derive command *)
 Extraction Inline noConfusion NoConfusionPackage_nat.

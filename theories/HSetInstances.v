@@ -23,24 +23,118 @@ Defined.
 Instance unit_eqdec : EqDec Unit.
 Proof. eqdec_proof. Defined.
 
+(* TODO These instance proofs should use eqdec_proof. *)
+
 Require Import HoTT.Types.Bool.
 Definition Bool_rect := Bool_ind.
 
-(* FIXME eqdec_proof is missing inversion.
 Instance bool_eqdec : EqDec Bool.
-Proof. Admitted.
+Proof. unfold EqDec. intros; destruct x,y; try (apply inl; reflexivity).
+apply inr; intro.
+  refine (
+    match X in Id _ b return
+      match b with
+      | true => Unit
+      | false => _
+      end
+    with
+    | id_refl => tt
+    end).
+apply inr; intro.
+  refine (
+    match X in Id _ b return
+      match b with
+      | false => Unit
+      | true => _
+      end
+    with
+    | id_refl => tt
+    end).
+Defined.
 
+Require Import HoTT.Spaces.Nat.
 Instance nat_eqdec : EqDec nat.
-Proof. Admitted.
+Proof. unfold EqDec. intros.
+  destruct (dec_paths x y).
+  - rewrite p; apply inl; reflexivity.
+  - apply inr; intro. destruct n. rewrite X; reflexivity. Defined.
 
 Instance prod_eqdec {A B} `(EqDec A) `(EqDec B) : EqDec (prod A B).
-Proof. Admitted.
+Proof. unfold EqDec; intros. destruct x,y. destruct (eq_dec fst fst0), (eq_dec snd snd0).
+  - apply inl. rewrite i, i0; reflexivity.
+  - apply inr; intro; apply e.
+    apply (Id_rec _ (fst,snd) (fun a _ => Id snd (Coq.Init.Datatypes.snd a))
+                  id_refl (fst0,snd0) X).
+  - apply inr; intro; apply e.
+    apply (Id_rec _ (fst,snd) (fun a _ => Id fst (Coq.Init.Datatypes.fst a))
+                  id_refl (fst0,snd0) H1).
+  - apply inr; intro; apply e.
+    apply (Id_rec _ (fst,snd) (fun a _ => Id fst (Coq.Init.Datatypes.fst a))
+                  id_refl (fst0,snd0) H1). Defined.
 
+Local Lemma eqDecIsDecidablePaths {A} (X : EqDec A) : DecidablePaths A.
+Proof. intros x y. destruct (eq_dec x y).
+  - apply Datatypes.inl. rewrite i; reflexivity.
+  - apply Datatypes.inr. intro H. rewrite H in e.
+    destruct (e id_refl). Defined.
+
+Require Import HoTT.Types.Sum.
 Instance sum_eqdec {A B} `(x : EqDec A) `(y : EqDec B) : EqDec (A + B).
-Proof. Admitted.
+Proof. unfold EqDec; intros.
+  set(x' := eqDecIsDecidablePaths x); set(y' := eqDecIsDecidablePaths y).
+  destruct (dec_paths x0 y0).
+  - apply inl; rewrite p. constructor.
+  - apply inr; intro. rewrite X in n; destruct (n idpath). Defined.
+
+Local Open Scope list_scope.
+
+Local Definition tl_list {A} (x : list A) : list A :=
+  match x with
+  | nil => nil
+  | _ :: t => t
+  end.
+
+Local Definition hd_list {A} (x : list A) : option A :=
+  match x with
+  | nil => None
+  | h :: _ => Some h
+  end.
 
 Instance list_eqdec {A} `(EqDec A) : EqDec (list A).
-Proof. Admitted.
+Proof. unfold EqDec. intro x. induction x; intros; destruct y.
+  - apply inl; reflexivity.
+  - apply inr; intro.
+    refine (match X in Id _ c return
+      match c with
+      | nil => Unit
+      | _::_ => _
+      end
+    with
+    | id_refl => tt
+    end).
+  - apply inr; intro.
+    refine (match X in Id _ c return
+      match c with
+      | nil => _
+      | _::_ => Unit
+      end
+    with
+    | id_refl => tt
+    end).
+  - destruct (eq_dec a a0).
+    + rewrite i. destruct (IHx y).
+      * apply inl. rewrite i0; reflexivity.
+      * apply inr. intro; apply e.
+        apply(Id_rec _ (a0::x) (fun z _ => Id x (tl_list z)) id_refl (a0::y) X).
+    + apply inr; intro. apply e.
+      apply (Id_rec _ (a::x)
+                    (fun z _ =>
+                      match hd_list z with
+                      | None => Id a a0
+                      | Some h => Id a h
+                      end)
+                    id_refl (a0::y) H0).
+Defined.
 
 (** Any signature made up entirely of decidable types is decidable. *)
 
@@ -57,4 +151,3 @@ Proof.
 Defined.
 
 Polymorphic Existing Instance eqdec_sig_Id.
-*)
