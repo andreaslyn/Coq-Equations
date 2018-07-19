@@ -9,8 +9,7 @@ Problems:
   8. HSetInstances.v: Missing inversion tactic (eqdec_proof), FIXME.
   9. Subterm.v: Missing rest of file (missing Wf_nat.v), TODO.
  10. There are a few more files using inversion (which is not working).
- 11. examples/Basics.v: Anomaly "Universe Var(0) undefined.", FIXME.
- 12. noconf.v: make_definition fails when using ~types:arity, FIXME.
- 13. HSetInstances.v: Proofs should use eqdec_proof, TODO.
- 14. DepElim.v: Proofs should use eqdec_proof, TODO.
- 15. Below.v: Missing Vector, FIXME.
+ 11. noconf.v: make_definition fails when using ~types:arity, FIXME.
+ 12. HSetInstances.v: Proofs should use eqdec_proof, TODO.
+ 13. DepElim.v: Proofs should use eqdec_proof, TODO.
+ 14. Below.v: Missing Vector, FIXME.

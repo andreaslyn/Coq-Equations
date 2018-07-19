@@ -50,18 +50,17 @@ Module Obligations.
   f 0 := 42 ;
   f (S m) with f m :=
   {
-    f (S m) IH := IH
+    f (S m) IH := _
   }.
-  (*Next Obligation.
+  Next Obligation.
     intros. exact IH.
-  Defined.*)
+  Defined.
 
 End Obligations.
 
 (** Structural recursion and use of the [with] feature to look at the result
     of a recursive call (here with a trivial pattern-matching. *)
 
-Import List.
 Equations app_with {A} (l l' : list A) : list A :=
 app_with nil l := l ;
 app_with (cons a v) l <= app_with v l => {

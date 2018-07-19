@@ -20,9 +20,10 @@ equationsDir=`pwd` # Hack alert: not all Unix systems have readlink.
 hottDir="$equationsDir"/custom-HoTT
 
 usageExit() {
-  echo "Usage: $0 [HoTT|Eq]" >&2
+  echo "Usage: $0 [HoTT|Eq|Ex]" >&2
   echo "  HoTT  builds custom HoTT" >&2
   echo "  Eq    builds Equations (depends on custom HoTT)." >&2
+  echo "  Ex    builds Equations and examples (depends on custom HoTT)." >&2
   exit 1
 }
 
@@ -88,9 +89,7 @@ buildFromHoTTDir() {
 
 makeCoq() {
   if [ ! -e "$hottDir"/coq-HoTT/Makefile ]; then
-    git -C "$hottDir" submodule sync
-    git -C "$hottDir" submodule update --init --recursive
-    git -C "$hottDir"/coq-HoTT checkout f895effe3f507e138c781134c621d76035c97e5f
+    git clone -b hott-port https://github.com/andreaslyn/coq.git "$hottDir"/coq-HoTT
     cd "$hottDir"/coq-HoTT
     ./configure -local
   fi
