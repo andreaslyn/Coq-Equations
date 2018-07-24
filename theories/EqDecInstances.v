@@ -1,4 +1,6 @@
-From Equations Require Import EqDec DepElim NoConfusion.
+From Equations Require Import EqDec DepElim NoConfusion HoTTUtil.
+
+Local Open Scope list_scope.
 
 (** Tactic to solve EqDec goals, destructing recursive calls for the recursive 
   structure of the type and calling instances of eq_dec on other types. *)
@@ -114,20 +116,6 @@ Proof. unfold EqDec; intros.
   - apply inl; rewrite p. constructor.
   - apply inr; intro. rewrite X in n; destruct (n idpath). Defined.
 
-Local Open Scope list_scope.
-
-Local Definition tl_list {A} (x : list A) : list A :=
-  match x with
-  | nil => nil
-  | _ :: t => t
-  end.
-
-Local Definition hd_list {A} (x : list A) : option A :=
-  match x with
-  | nil => None
-  | h :: _ => Some h
-  end.
-
 Instance list_eqdec {A} `(EqDec A) : EqDec (list A). 
 Proof. unfold EqDec. intro x. induction x; intros; destruct y.
   - apply inl; reflexivity.
@@ -153,11 +141,11 @@ Proof. unfold EqDec. intro x. induction x; intros; destruct y.
     + rewrite p. destruct (IHx y).
       * apply inl. rewrite p0; reflexivity.
       * apply inr. intro; apply n.
-        apply(paths_ind (a0::x) (fun z _ => x = (tl_list z)) idpath (a0::y) X).
+        apply(paths_ind (a0::x) (fun z _ => x = (HoTTUtil.tl z)) idpath (a0::y) X).
     + apply inr; intro. apply n.
       apply (paths_ind (a::x)
                     (fun z _ =>
-                      match hd_list z with
+                      match HoTTUtil.hd z with
                       | None => a = a0
                       | Some h => a = h
                       end)

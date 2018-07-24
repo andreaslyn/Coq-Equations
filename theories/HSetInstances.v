@@ -6,10 +6,12 @@
 (* GNU Lesser General Public License Version 2.1                      *)
 (**********************************************************************)
 
-From Equations Require Import Init DepElim HSets.
+From Equations Require Import Init DepElim HSets HoTTUtil.
 Require Import Coq.Logic.JMeq.
 Require Import HoTT.Basics.Overture.
 Require Import HoTT.Basics.Decidable.
+
+Local Open Scope list_scope.
 
 Set Universe Polymorphism.
 
@@ -86,20 +88,6 @@ Proof. unfold EqDec; intros.
   - apply inl; rewrite p. constructor.
   - apply inr; intro. rewrite X in n; destruct (n idpath). Defined.
 
-Local Open Scope list_scope.
-
-Local Definition tl_list {A} (x : list A) : list A :=
-  match x with
-  | nil => nil
-  | _ :: t => t
-  end.
-
-Local Definition hd_list {A} (x : list A) : option A :=
-  match x with
-  | nil => None
-  | h :: _ => Some h
-  end.
-
 Instance list_eqdec {A} `(EqDec A) : EqDec (list A).
 Proof. unfold EqDec. intro x. induction x; intros; destruct y.
   - apply inl; reflexivity.
@@ -125,11 +113,11 @@ Proof. unfold EqDec. intro x. induction x; intros; destruct y.
     + rewrite i. destruct (IHx y).
       * apply inl. rewrite i0; reflexivity.
       * apply inr. intro; apply e.
-        apply(Id_rec _ (a0::x) (fun z _ => Id x (tl_list z)) id_refl (a0::y) X).
+        apply(Id_rec _ (a0::x) (fun z _ => Id x (HoTTUtil.tl z)) id_refl (a0::y) X).
     + apply inr; intro. apply e.
       apply (Id_rec _ (a::x)
                     (fun z _ =>
-                      match hd_list z with
+                      match HoTTUtil.hd z with
                       | None => Id a a0
                       | Some h => Id a h
                       end)
