@@ -112,14 +112,14 @@ Section Reflexive_Symmetric_Transitive_Closure.
 
   Inductive clos_refl_sym_trans_1n (x: A) : A -> Type :=
     | rst1n_refl : clos_refl_sym_trans_1n x x
-    | rst1n_trans (y z:A) : R x y \/ R y x ->
+    | rst1n_trans (y z:A) : R x y |_| R y x ->
          clos_refl_sym_trans_1n y z -> clos_refl_sym_trans_1n x z.
 
   (** Alternative definition by symmetric-transitive extension on the right *)
 
   Inductive clos_refl_sym_trans_n1 (x: A) : A -> Type :=
     | rstn1_refl : clos_refl_sym_trans_n1 x x
-    | rstn1_trans (y z:A) : R y z \/ R z y ->
+    | rstn1_trans (y z:A) : R y z |_| R z y ->
          clos_refl_sym_trans_n1 x y -> clos_refl_sym_trans_n1 x z.
 
 End Reflexive_Symmetric_Transitive_Closure.
@@ -139,7 +139,7 @@ Section Union.
   Variable A : Type.
   Variables R1 R2 : relation A.
 
-  Definition union (x y:A) := R1 x y \/ R2 x y.
+  Definition union (x y:A) := R1 x y |_| R2 x y.
 End Union.
 
 (** ** Disjoint union of relations *)
