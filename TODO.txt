@@ -13,3 +13,10 @@ Problems:
  12. HSetInstances.v: Proofs should use eqdec_proof, TODO.
  13. DepElim.v: Proofs should use eqdec_proof, TODO.
  14. Below.v: Missing Vector, FIXME.
+ 15. In Coq: kernel/constr.ml: Commented out universe check, FIXME.
+     Obligation Tactic := idtac.
+     Equations succ_not_zero (n:nat) : S n ≠ O :=
+     succ_not_zero O := HoTTUtil.nat_path_S_O ;
+     succ_not_zero (S n) :=
+       let dummy := succ_not_zero n in _.
+     Next Obligation. intros f n dummy H. exact (HoTTUtil.nat_path_S_O H). Defined.
