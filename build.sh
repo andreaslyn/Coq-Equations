@@ -93,7 +93,7 @@ makeCoq() {
     cd "$hottDir"/coq-HoTT
     ./configure -local
   fi
-  git -C "$hottDir"/coq-HoTT checkout hott-port
+  git -C "$hottDir"/coq-HoTT checkout 89018c61a8a59d8bd9ccd30430ce54af529f924d
   make -C "$hottDir"/coq-HoTT clean
   make -C "$hottDir"/coq-HoTT -j$makeThreads \
     coqlight coqide plugins/extraction/extraction_plugin.cmxs
@@ -107,7 +107,7 @@ makeHoTT() {
   fi
   make -C "$hottDir" clean
   make -C "$hottDir" -j$makeThreads
-  git -C "$hottDir"/coq-HoTT checkout hott-port
+  git -C "$hottDir"/coq-HoTT checkout 89018c61a8a59d8bd9ccd30430ce54af529f924d
 }
 
 buildCustomHoTTFiles() {

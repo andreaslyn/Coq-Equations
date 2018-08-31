@@ -29,6 +29,14 @@ Require Import DepElimDec.
 Require Import HoTT.Types.Bool.
 Definition Bool_rect := Bool_ind.
 
+Obligation Tactic := idtac.
+Equations succ_not_zero (n:nat) : S n ≠ O :=
+succ_not_zero O := HoTTUtil.nat_path_S_O ;
+succ_not_zero (S n) :=
+  let dummy := succ_not_zero n in _.
+Next Obligation. intros f n dummy H. exact (HoTTUtil.nat_path_S_O H). Defined.
+Next Obligation. intros f n dummy. exact HoTTUtil.nat_path_S_O. Defined.
+
 Local Open Scope path_scope.
 
 (** Just pattern-matching *)
